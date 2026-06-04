@@ -64,6 +64,8 @@ export default function App() {
   // Estados de confirmação secundária (Prevenção de Cliques Acidentais)
   const [confirmDeleteDebtorId, setConfirmDeleteDebtorId] = useState<string | null>(null);
   const [confirmDeleteDebtId, setConfirmDeleteDebtId] = useState<string | null>(null);
+  const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState<string>('');
 
   // Auxiliares: Resgatar o Devedor Selecionado
   const activeDebtor = debtors.find((d) => d.id === selectedDebtorId) || null;
@@ -129,13 +131,14 @@ export default function App() {
   };
 
   // Handler: Alterar Estado da Dívida (Pagar / Reabrir)
-  const handleToggleDebtStatus = async (debtId: string) => {
+  const handleToggleDebtStatus = async (debtId: string, paidAmount?: number) => {
     const debt = debts.find((d) => d.id === debtId);
     if (!debt) return;
     const isPending = debt.status === 'pending';
-    const updates = {
+    const updates: Record<string, unknown> = {
       status: isPending ? 'paid' : 'pending',
       paidDate: isPending ? getTodayStr() : null,
+      paidAmount: isPending ? (paidAmount ?? null) : null,
     };
     const { data } = await supabase.from('debts').update(updates).eq('id', debtId).select();
     if (data) {
@@ -143,6 +146,24 @@ export default function App() {
         prev.map((d) => (d.id === debtId ? (data[0] as Debt) : d))
       );
     }
+  };
+
+  const handleStartPay = (debt: Debt) => {
+    setPayingDebtId(debt.id);
+    setPayAmount(debt.amount.toString());
+  };
+
+  const handleConfirmPay = async (debtId: string) => {
+    const parsed = parseFloat(payAmount);
+    if (isNaN(parsed) || parsed <= 0) return;
+    await handleToggleDebtStatus(debtId, parsed);
+    setPayingDebtId(null);
+    setPayAmount('');
+  };
+
+  const handleCancelPay = () => {
+    setPayingDebtId(null);
+    setPayAmount('');
   };
 
   // Handler: Excluir Dívida
@@ -738,14 +759,42 @@ export default function App() {
                                   </div>
 
                                   <div className="flex items-center space-x-1.5 border-l border-slate-150 pl-3">
-                                    {/* Botão Pagar */}
-                                    <button
-                                      onClick={() => handleToggleDebtStatus(debt.id)}
-                                      className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all"
-                                      title="Marcar como recebido/pago"
-                                    >
-                                      <Check className="w-4 h-4" />
-                                    </button>
+                                    {payingDebtId === debt.id ? (
+                                      <div className="flex items-center space-x-1 animate-fade-in">
+                                        <input
+                                          type="number"
+                                          step="0.01"
+                                          min="0.01"
+                                          value={payAmount}
+                                          onChange={(e) => setPayAmount(e.target.value)}
+                                          className="w-20 px-1.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-right font-mono"
+                                          placeholder="Valor"
+                                          autoFocus
+                                        />
+                                        <button
+                                          onClick={() => handleConfirmPay(debt.id)}
+                                          className="p-1.5 bg-emerald-600 text-white hover:bg-emerald-700 rounded-lg transition-all"
+                                          title="Confirmar pagamento"
+                                        >
+                                          <Check className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                          onClick={handleCancelPay}
+                                          className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-all"
+                                          title="Cancelar"
+                                        >
+                                          <X className="w-3.5 h-3.5" />
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleStartPay(debt)}
+                                        className="p-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 rounded-lg transition-all"
+                                        title="Marcar como recebido/pago"
+                                      >
+                                        <Check className="w-4 h-4" />
+                                      </button>
+                                    )}
 
                                     {/* Deletar Individual */}
                                     {confirmDeleteDebtId === debt.id ? (
@@ -804,11 +853,17 @@ export default function App() {
                               <div className="flex items-center space-x-3">
                                 <div className="text-right">
                                   <span className="text-sm font-extrabold text-emerald-800 block font-mono">
-                                    {formatCurrency(debt.amount)}
+                                    {formatCurrency(debt.paidAmount ?? debt.amount)}
                                   </span>
-                                  <span className="inline-block px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-sm">
-                                    Quitada
-                                  </span>
+                                  {debt.paidAmount != null && debt.paidAmount !== debt.amount ? (
+                                    <span className="inline-block px-1.5 py-0.2 text-emerald-600 text-[9px] font-bold rounded-sm">
+                                      Pago {formatCurrency(debt.paidAmount)} de {formatCurrency(debt.amount)}
+                                    </span>
+                                  ) : (
+                                    <span className="inline-block px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-sm">
+                                      Quitada
+                                    </span>
+                                  )}
                                 </div>
 
                                 <div className="flex items-center space-x-1.5 border-l border-emerald-100/50 pl-3">

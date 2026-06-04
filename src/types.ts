@@ -7,6 +7,7 @@ export interface Debt {
   dueDate: string; // Formato AAAA-MM-DD
   status: 'pending' | 'paid';
   paidDate?: string; // Formato AAAA-MM-DD
+  paidAmount?: number; // Valor efetivamente pago (pode ser parcial)
 }
 
 export interface Debtor {
