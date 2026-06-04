@@ -34,22 +34,43 @@ import { DashboardStats } from './components/DashboardStats';
 import { DebtorModal } from './components/DebtorModal';
 import { AddDebtModal } from './components/AddDebtModal';
 import { supabase } from './lib/supabase';
+import { Auth } from './components/Auth';
 
 export default function App() {
+  const [session, setSession] = useState<unknown>(null);
   const [debtors, setDebtors] = useState<Debtor[]>([]);
   const [debts, setDebts] = useState<Debt[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    async function loadData() {
-      const { data: debtorsData } = await supabase.from('debtors').select('*');
-      const { data: debtsData } = await supabase.from('debts').select('*');
-      if (debtorsData) setDebtors(debtorsData as Debtor[]);
-      if (debtsData) setDebts(debtsData as Debt[]);
-      setIsLoading(false);
-    }
-    loadData();
+    supabase.auth.getSession().then(({ data: { session: s } }) => {
+      setSession(s);
+      if (s) loadData();
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, s) => {
+      setSession(s);
+      if (s) {
+        loadData();
+      } else {
+        setDebtors([]);
+        setDebts([]);
+      }
+    });
+    return () => subscription.unsubscribe();
   }, []);
+
+  async function loadData() {
+    setIsLoading(true);
+    const { data: debtorsData } = await supabase.from('debtors').select('*');
+    const { data: debtsData } = await supabase.from('debts').select('*');
+    if (debtorsData) setDebtors(debtorsData as Debtor[]);
+    if (debtsData) setDebts(debtsData as Debt[]);
+    setIsLoading(false);
+  }
+
+  if (!session) {
+    return <Auth />;
+  }
 
   const [selectedDebtorId, setSelectedDebtorId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -323,6 +344,13 @@ export default function App() {
             >
               <Plus className="w-4 h-4" />
               <span>Novo Devedor</span>
+            </button>
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="p-2 border border-slate-200 rounded-xl text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all"
+              title="Sair"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
             </button>
           </div>
         </div>
