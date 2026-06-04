@@ -8,15 +8,15 @@ interface DashboardStatsProps {
 }
 
 export function DashboardStats({ debtors, debts }: DashboardStatsProps) {
-  // Total Devido: soma de todas as dívidas 'pending'
   const totalPending = debts
     .filter((d) => d.status === 'pending')
     .reduce((sum, d) => sum + d.amount, 0);
 
-  // Total Pago: soma de todas as dívidas 'paid'
-  const totalPaid = debts
-    .filter((d) => d.status === 'paid')
-    .reduce((sum, d) => sum + d.amount, 0);
+  const totalPaid = debts.reduce((sum, d) => {
+    if (d.paidAmount) return sum + d.paidAmount;
+    if (d.status === 'paid') return sum + d.amount;
+    return sum;
+  }, 0);
 
   // Devedores Ativos: devedores que têm pelo menos 1 dívida pending
   const activeDebtorsCount = debtors.filter((debtor) =>
