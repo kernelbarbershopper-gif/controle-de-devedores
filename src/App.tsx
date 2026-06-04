@@ -44,18 +44,8 @@ export default function App() {
     async function loadData() {
       const { data: debtorsData } = await supabase.from('debtors').select('*');
       const { data: debtsData } = await supabase.from('debts').select('*');
-      if (debtorsData && debtorsData.length > 0) {
-        setDebtors(debtorsData as Debtor[]);
-      } else {
-        const demo = getInitialData();
-        const { data: insertedDebtors } = await supabase.from('debtors').insert(demo.debtors).select();
-        if (insertedDebtors) setDebtors(insertedDebtors as Debtor[]);
-        const { data: insertedDebts } = await supabase.from('debts').insert(demo.debts).select();
-        if (insertedDebts) setDebts(insertedDebts as Debt[]);
-      }
-      if (debtsData && debtsData.length > 0) {
-        setDebts(debtsData as Debt[]);
-      }
+      if (debtorsData) setDebtors(debtorsData as Debtor[]);
+      if (debtsData) setDebts(debtsData as Debt[]);
       setIsLoading(false);
     }
     loadData();
