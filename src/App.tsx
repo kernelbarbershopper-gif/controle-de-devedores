@@ -66,6 +66,7 @@ export default function App() {
   const [confirmDeleteDebtId, setConfirmDeleteDebtId] = useState<string | null>(null);
   const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
   const [payAmount, setPayAmount] = useState<string>('');
+  const [payDate, setPayDate] = useState<string>('');
 
   // Auxiliares: Resgatar o Devedor Selecionado
   const activeDebtor = debtors.find((d) => d.id === selectedDebtorId) || null;
@@ -131,13 +132,13 @@ export default function App() {
   };
 
   // Handler: Alterar Estado da Dívida (Pagar / Reabrir)
-  const handleToggleDebtStatus = async (debtId: string, paidAmount?: number) => {
+  const handleToggleDebtStatus = async (debtId: string, paidAmount?: number, payDateStr?: string) => {
     const debt = debts.find((d) => d.id === debtId);
     if (!debt) return;
     const isPending = debt.status === 'pending';
     const updates: Record<string, unknown> = {
       status: isPending ? 'paid' : 'pending',
-      paidDate: isPending ? getTodayStr() : null,
+      paidDate: isPending ? (payDateStr ?? getTodayStr()) : null,
       paidAmount: isPending ? (paidAmount ?? null) : null,
       amount: isPending ? 0 : (debt.amount + (debt.paidAmount || 0)),
     };
@@ -152,6 +153,7 @@ export default function App() {
   const handleStartPay = (debt: Debt) => {
     setPayingDebtId(debt.id);
     setPayAmount(debt.amount.toString());
+    setPayDate(getTodayStr());
   };
 
   const handleConfirmPay = async (debtId: string) => {
@@ -162,10 +164,10 @@ export default function App() {
     const cumulativePaid = (debt.paidAmount || 0) + parsed;
     const originalAmount = debt.amount + (debt.paidAmount || 0);
     if (cumulativePaid >= originalAmount) {
-      await handleToggleDebtStatus(debtId, cumulativePaid);
+      await handleToggleDebtStatus(debtId, cumulativePaid, payDate);
     } else {
       const remaining = originalAmount - cumulativePaid;
-      const updates = { amount: remaining, paidAmount: cumulativePaid };
+      const updates = { amount: remaining, paidAmount: cumulativePaid, paidDate: payDate || null };
       const { data } = await supabase.from('debts').update(updates).eq('id', debtId).select();
       if (data) {
         setDebts((prev) =>
@@ -180,6 +182,7 @@ export default function App() {
   const handleCancelPay = () => {
     setPayingDebtId(null);
     setPayAmount('');
+    setPayDate('');
   };
 
   // Handler: Excluir Dívida
@@ -782,12 +785,18 @@ export default function App() {
                                     {payingDebtId === debt.id ? (
                                       <div className="flex items-center space-x-1 animate-fade-in">
                                         <input
+                                          type="date"
+                                          value={payDate}
+                                          onChange={(e) => setPayDate(e.target.value)}
+                                          className="w-28 px-1.5 py-1 text-[10px] border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+                                        />
+                                        <input
                                           type="number"
                                           step="0.01"
                                           min="0.01"
                                           value={payAmount}
                                           onChange={(e) => setPayAmount(e.target.value)}
-                                          className="w-20 px-1.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-right font-mono"
+                                          className="w-16 px-1.5 py-1 text-xs border border-slate-200 rounded-lg focus:outline-hidden focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-right font-mono"
                                           placeholder="Valor"
                                           autoFocus
                                         />
