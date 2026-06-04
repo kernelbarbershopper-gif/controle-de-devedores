@@ -139,6 +139,7 @@ export default function App() {
       status: isPending ? 'paid' : 'pending',
       paidDate: isPending ? getTodayStr() : null,
       paidAmount: isPending ? (paidAmount ?? null) : null,
+      amount: isPending ? 0 : (debt.amount + (debt.paidAmount || 0)),
     };
     const { data } = await supabase.from('debts').update(updates).eq('id', debtId).select();
     if (data) {
@@ -156,7 +157,22 @@ export default function App() {
   const handleConfirmPay = async (debtId: string) => {
     const parsed = parseFloat(payAmount);
     if (isNaN(parsed) || parsed <= 0) return;
-    await handleToggleDebtStatus(debtId, parsed);
+    const debt = debts.find((d) => d.id === debtId);
+    if (!debt) return;
+    const cumulativePaid = (debt.paidAmount || 0) + parsed;
+    const originalAmount = debt.amount + (debt.paidAmount || 0);
+    if (cumulativePaid >= originalAmount) {
+      await handleToggleDebtStatus(debtId, cumulativePaid);
+    } else {
+      const remaining = originalAmount - cumulativePaid;
+      const updates = { amount: remaining, paidAmount: cumulativePaid };
+      const { data } = await supabase.from('debts').update(updates).eq('id', debtId).select();
+      if (data) {
+        setDebts((prev) =>
+          prev.map((d) => (d.id === debtId ? (data[0] as Debt) : d))
+        );
+      }
+    }
     setPayingDebtId(null);
     setPayAmount('');
   };
@@ -747,7 +763,11 @@ export default function App() {
                                     <span className="text-base font-extrabold text-slate-900 block font-mono">
                                       {formatCurrency(debt.amount)}
                                     </span>
-                                    {delayDays > 0 ? (
+                                    {debt.paidAmount != null ? (
+                                      <span className="inline-block px-2 py-0.5 mt-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-md">
+                                        Restante de {formatCurrency(debt.paidAmount + debt.amount)}
+                                      </span>
+                                    ) : delayDays > 0 ? (
                                       <span className="inline-block px-2 py-0.5 mt-0.5 bg-red-100 text-red-700 text-[10px] font-bold rounded-md animate-pulse">
                                         ⚠️ {delayDays} dias de atraso
                                       </span>
@@ -855,9 +875,9 @@ export default function App() {
                                   <span className="text-sm font-extrabold text-emerald-800 block font-mono">
                                     {formatCurrency(debt.paidAmount ?? debt.amount)}
                                   </span>
-                                  {debt.paidAmount != null && debt.paidAmount !== debt.amount ? (
+                                  {debt.paidAmount != null && debt.amount > 0 ? (
                                     <span className="inline-block px-1.5 py-0.2 text-emerald-600 text-[9px] font-bold rounded-sm">
-                                      Pago {formatCurrency(debt.paidAmount)} de {formatCurrency(debt.amount)}
+                                      Pago {formatCurrency(debt.paidAmount)} de {formatCurrency(debt.paidAmount + debt.amount)}
                                     </span>
                                   ) : (
                                     <span className="inline-block px-1.5 py-0.2 bg-emerald-100 text-emerald-800 text-[9px] font-bold rounded-sm">
