@@ -59,6 +59,19 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+  const [selectedDebtorId, setSelectedDebtorId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'delayed' | 'overlimit'>('all');
+  const [debtsTab, setDebtsTab] = useState<'pending' | 'paid'>('pending');
+  const [isDebtorModalOpen, setIsDebtorModalOpen] = useState(false);
+  const [selectedEditDebtor, setSelectedEditDebtor] = useState<Debtor | null>(null);
+  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
+  const [confirmDeleteDebtorId, setConfirmDeleteDebtorId] = useState<string | null>(null);
+  const [confirmDeleteDebtId, setConfirmDeleteDebtId] = useState<string | null>(null);
+  const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState<string>('');
+  const [payDate, setPayDate] = useState<string>('');
+
   async function loadData() {
     setIsLoading(true);
     const { data: debtorsData } = await supabase.from('debtors').select('*');
@@ -71,23 +84,6 @@ export default function App() {
   if (!session) {
     return <Auth />;
   }
-
-  const [selectedDebtorId, setSelectedDebtorId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterType, setFilterType] = useState<'all' | 'delayed' | 'overlimit'>('all');
-  const [debtsTab, setDebtsTab] = useState<'pending' | 'paid'>('pending');
-
-  // Modais de Cadastro
-  const [isDebtorModalOpen, setIsDebtorModalOpen] = useState(false);
-  const [selectedEditDebtor, setSelectedEditDebtor] = useState<Debtor | null>(null);
-  const [isDebtModalOpen, setIsDebtModalOpen] = useState(false);
-
-  // Estados de confirmação secundária (Prevenção de Cliques Acidentais)
-  const [confirmDeleteDebtorId, setConfirmDeleteDebtorId] = useState<string | null>(null);
-  const [confirmDeleteDebtId, setConfirmDeleteDebtId] = useState<string | null>(null);
-  const [payingDebtId, setPayingDebtId] = useState<string | null>(null);
-  const [payAmount, setPayAmount] = useState<string>('');
-  const [payDate, setPayDate] = useState<string>('');
 
   // Auxiliares: Resgatar o Devedor Selecionado
   const activeDebtor = debtors.find((d) => d.id === selectedDebtorId) || null;
