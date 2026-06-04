@@ -1,0 +1,6 @@
+{
+  "name": "Controle de Devedores",
+  "description": "Aplicativo para gerenciamento de dívidas, controle de limites por pessoa e contagem de dias de atraso.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
